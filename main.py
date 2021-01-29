@@ -18,6 +18,7 @@ def TI_Backward_Neighborhood(D, point, Eps):
 
     # going through the list
     for q in pointsAfterP:
+        # dist(p,r) - dist(q,r) > Eps  ==>  dist(q,r) < dist(q,r) - Eps
         if q.dist < backwardThreshold:  # we directly know it's not part of the neighborhood
             break
         if Distance(q.Coords, point.Coords) <= Eps:  # it's part of the neighborhood
@@ -39,6 +40,7 @@ def TI_Forward_Neighborhood(D, point, Eps):
 
     # going through the list
     for q in pointsBeforeP:
+        # dist(q,r) - dist(p,r) > Eps  ==>  dist(q,r) > Eps + dist(q,r)
         if q.dist > forwardThreshold:  # we directly know it's not part of the neighborhood
             break
         if Distance(q.Coords, point.Coords) <= Eps:  # it's part of the neighborhood
@@ -149,29 +151,20 @@ def TI_ExpandCluster(D, checkedD, point, clusterId, Eps, MinPts):
 
 # calculates the euclidean distance between a point and the reference point (2D)
 def Distance(point, referencePoint):
-    point = np.array(point[0:2])
-    referencePoint = np.array(referencePoint[0:2])
     return np.sqrt(np.sum(np.power(point - referencePoint, 2)))
 
 
 class pointClass:
-    def __init__(self, point, referencePoint, metadata=None):
-        try:
-            # metadata
-            self.metadata = metadata
-            # coordinates
-            self.Coords = point[0:2]
-        except:
-            pass
-
+    def __init__(self, point, referencePoint):
+        self.Coords = point
         self.ClusterId = "UNCLASSIFIED"
-        self.dist = Distance(point[0:2], referencePoint[0:2])
+        self.dist = Distance(point, referencePoint)
         self.NeighborsNo = 1
         self.Border = []
 
 
 # applies the TI-DBSCAN algorithm to the dataset D with a given value of Eps and MinPts
-def TI_DBScan(D, Eps, MinPts, metadata=None):
+def TI_DBScan(D, Eps, MinPts):
     # the data structure is: D = [[coord1, coord2, ...], ...]
     # the first two values are the 2 dimension coordinates of each element
 
@@ -186,12 +179,8 @@ def TI_DBScan(D, Eps, MinPts, metadata=None):
     checkedD = []
 
     # transformation and initialization of the points (distance, cluster, ...)
-    try:
-        D = [pointClass(D[index], referencePoint, metadata=metadata[index])
-             for index in xrange(len(D))]
-    except TypeError:
-        D = [pointClass(D[index], referencePoint)
-             for index in xrange(len(D))]
+    D = [pointClass(D[index], referencePoint)
+         for index in xrange(len(D))]
 
     # sorts all points in D non-decreasingly by the field dist
     D = sorted(D, key=operator.attrgetter('dist'))
@@ -211,9 +200,10 @@ def TI_DBScan(D, Eps, MinPts, metadata=None):
     return checkedD
 
 
+'''
 # test data
-'''testPoints = [[1.00, 1.00], [1.50, 1.00], [2.00, 1.50], [5.00, 5.00], [6.00, 5.50], [5.50, 6.00],
-                      [10.00, 11.00], [10.50, 9.50], [10.00, 10.00], [8.00, 1.00], [1.00, 8.00]]'''
+testPoints = [[1.00, 1.00], [1.50, 1.00], [2.00, 1.50], [5.00, 5.00], [6.00, 5.50], [5.50, 6.00],
+                      [10.00, 11.00], [10.50, 9.50], [10.00, 10.00], [8.00, 1.00], [1.00, 8.00]]
 
 testPoints = [[1, 2], [3, 4], [2.5, 4], [1.5, 2.5], [3, 5], [2.8, 4.5], [2.5, 4.5], [1.2, 2.5], [1, 3],
               [1, 5], [1, 2.5], [5, 6], [4, 3]]
@@ -222,5 +212,22 @@ testPointsClustered = TI_DBScan(testPoints, 0.6, 4)
 
 for point in testPointsClustered:
     print(point.ClusterId + ' - [' + ', '.join(map(str, point.Coords)) + ']')
+'''
 
+# dataset iris
+iris = []
+
+# open file
+file = open('iris.data')
+
+# goes through every line in the file
+for line in file:
+    point = line.split(',')  # gets each point's coordinates (4 dimensions)
+    iris.append(np.array(list(map(float, point[0:4]))))  # adds the point to the dataset
+
+# executes the TI-DBSCAN algorithm
+clusteredIris = TI_DBScan(iris, 0.424, 5)
+
+for point in clusteredIris:
+    print(point.ClusterId + ' - [' + ', '.join(map(str, point.Coords)) + ']')
 
